@@ -567,52 +567,87 @@ async def delete_campaign(campaign_id: str):
 @app.get("/api/stats")
 async def get_statistics():
     """Get statistics"""
-    all_leads = db.get_all_leads(limit=1000)
-    return {
-        "success": True,
-        "total_leads": len(all_leads),
-        "emailed": len([l for l in all_leads if l.status == "emailed"]),
-        "replied": len([l for l in all_leads if l.has_replied]),
-        "found": len([l for l in all_leads if l.status == "found"])
-    }
+    try:
+        all_leads = db.get_all_leads(limit=1000)
+        return {
+            "success": True,
+            "total_leads": len(all_leads),
+            "emailed": len([l for l in all_leads if l.status == "emailed"]),
+            "replied": len([l for l in all_leads if l.has_replied]),
+            "found": len([l for l in all_leads if l.status == "found"]),
+            "followed_up": len([l for l in all_leads if l.status == "followed_up"])
+        }
+    except Exception as e:
+        import traceback
+        print(f"ERROR in get_statistics: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "total_leads": 0,
+            "emailed": 0,
+            "replied": 0,
+            "found": 0,
+            "followed_up": 0,
+            "error": str(e)
+        }
 
 
 @app.get("/api/analytics/timeseries")
 async def get_timeseries_analytics(days: int = 30):
     """Get time-series analytics for lead growth"""
-    from datetime import timedelta
-    all_leads = db.get_all_leads(limit=10000)
-    
-    # Calculate date range
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    # Group leads by date
-    daily_counts = {}
-    for lead in all_leads:
-        if lead.created_at:
-            lead_date = lead.created_at.date()
-            if start_date.date() <= lead_date <= end_date.date():
-                date_str = lead_date.isoformat()
-                daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
-    
-    # Create sorted list of dates
-    dates = sorted(daily_counts.keys())
-    counts = [daily_counts[date] for date in dates]
-    
-    # Calculate cumulative
-    cumulative = []
-    total = 0
-    for count in counts:
-        total += count
-        cumulative.append(total)
-    
-    return {
-        "success": True,
-        "dates": dates,
-        "daily": counts,
-        "cumulative": cumulative
-    }
+    try:
+        from datetime import timedelta
+        all_leads = db.get_all_leads(limit=10000)
+        
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Group leads by date
+        daily_counts = {}
+        for lead in all_leads:
+            if lead.created_at:
+                try:
+                    lead_date = lead.created_at.date()
+                    if start_date.date() <= lead_date <= end_date.date():
+                        date_str = lead_date.isoformat()
+                        daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
+                except Exception as e:
+                    print(f"Error processing lead date: {e}")
+                    continue
+        
+        # Create sorted list of dates
+        dates = sorted(daily_counts.keys()) if daily_counts else []
+        counts = [daily_counts[date] for date in dates] if dates else []
+        
+        # Calculate cumulative
+        cumulative = []
+        total = 0
+        for count in counts:
+            total += count
+            cumulative.append(total)
+        
+        # Ensure we have at least empty arrays
+        if not dates:
+            dates = []
+            counts = []
+            cumulative = []
+        
+        return {
+            "success": True,
+            "dates": dates,
+            "daily": counts,
+            "cumulative": cumulative
+        }
+    except Exception as e:
+        import traceback
+        print(f"ERROR in get_timeseries_analytics: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "dates": [],
+            "daily": [],
+            "cumulative": [],
+            "error": str(e)
+        }
 
 
 @app.get("/api/analytics/funnel")
@@ -640,51 +675,78 @@ async def get_funnel_analytics():
 @app.get("/api/analytics/sources")
 async def get_source_analytics():
     """Get lead source analytics"""
-    all_leads = db.get_all_leads(limit=10000)
-    
-    # Group by campaign
-    campaign_sources = {}
-    for lead in all_leads:
-        if lead.campaign_id:
-            campaign = db.get_campaign(lead.campaign_id)
-            if campaign:
-                campaign_name = campaign.name
-                campaign_sources[campaign_name] = campaign_sources.get(campaign_name, 0) + 1
-    
-    # Sort by count
-    sorted_sources = sorted(campaign_sources.items(), key=lambda x: x[1], reverse=True)
-    
-    return {
-        "success": True,
-        "sources": [{"name": name, "count": count} for name, count in sorted_sources]
-    }
+    try:
+        all_leads = db.get_all_leads(limit=10000)
+        
+        # Group by campaign
+        campaign_sources = {}
+        for lead in all_leads:
+            if lead.campaign_id:
+                try:
+                    campaign = db.get_campaign(lead.campaign_id)
+                    if campaign:
+                        campaign_name = campaign.name or "Unnamed Campaign"
+                        campaign_sources[campaign_name] = campaign_sources.get(campaign_name, 0) + 1
+                except Exception as e:
+                    print(f"Error processing campaign for lead {lead.id}: {e}")
+                    continue
+        
+        # Sort by count
+        sorted_sources = sorted(campaign_sources.items(), key=lambda x: x[1], reverse=True)
+        
+        return {
+            "success": True,
+            "sources": [{"name": name, "count": count} for name, count in sorted_sources] if sorted_sources else []
+        }
+    except Exception as e:
+        import traceback
+        print(f"ERROR in get_source_analytics: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "sources": [],
+            "error": str(e)
+        }
 
 
 @app.get("/api/analytics/campaigns")
 async def get_campaign_analytics():
     """Get campaign performance analytics"""
-    campaigns = db.get_all_campaigns()
-    
-    campaign_data = []
-    for campaign in campaigns:
-        leads = db.get_all_leads(limit=10000)
-        campaign_leads = [l for l in leads if l.campaign_id == campaign.id]
+    try:
+        campaigns = db.get_all_campaigns()
         
-        emailed = len([l for l in campaign_leads if l.status == "emailed"])
-        replied = len([l for l in campaign_leads if l.has_replied])
+        campaign_data = []
+        all_leads = db.get_all_leads(limit=10000)
         
-        campaign_data.append({
-            "name": campaign.name,
-            "total": len(campaign_leads),
-            "emailed": emailed,
-            "replied": replied,
-            "reply_rate": (replied / len(campaign_leads) * 100) if len(campaign_leads) > 0 else 0
-        })
-    
-    return {
-        "success": True,
-        "campaigns": campaign_data
-    }
+        for campaign in campaigns:
+            try:
+                campaign_leads = [l for l in all_leads if l.campaign_id == campaign.id]
+                
+                emailed = len([l for l in campaign_leads if l.status == "emailed"])
+                replied = len([l for l in campaign_leads if l.has_replied])
+                
+                campaign_data.append({
+                    "name": campaign.name or "Unnamed Campaign",
+                    "total": len(campaign_leads),
+                    "emailed": emailed,
+                    "replied": replied,
+                    "reply_rate": (replied / len(campaign_leads) * 100) if len(campaign_leads) > 0 else 0.0
+                })
+            except Exception as e:
+                print(f"Error processing campaign {campaign.id}: {e}")
+                continue
+        
+        return {
+            "success": True,
+            "campaigns": campaign_data
+        }
+    except Exception as e:
+        import traceback
+        print(f"ERROR in get_campaign_analytics: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "campaigns": [],
+            "error": str(e)
+        }
 
 
 @app.post("/api/followup/check")

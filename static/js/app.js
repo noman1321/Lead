@@ -133,7 +133,10 @@ function switchTab(tab) {
         loadStats();
         loadCampaigns(); // Load campaigns for analytics tab
         displayCampaignsList(); // Display campaigns with delete buttons
-        loadAnalyticsCharts(); // Load all charts
+        // Wait a bit for tab to be visible before rendering charts
+        setTimeout(() => {
+            renderCharts(); // Render all charts
+        }, 300);
     }
 }
 
@@ -1360,29 +1363,81 @@ const chartColors = {
 
 // Load all analytics charts
 async function loadAnalyticsCharts() {
-    await Promise.all([
-        loadStatusChart(),
-        loadFunnelChart(),
-        loadTimeSeriesChart(),
-        loadSourceChart(),
-        loadCampaignChart()
-    ]);
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Check if we're on analytics tab
+    if (currentTab !== 'analytics') {
+        return;
+    }
+    
+    try {
+        await Promise.all([
+            loadStatusChart(),
+            loadFunnelChart(),
+            loadTimeSeriesChart(),
+            loadSourceChart(),
+            loadCampaignChart()
+        ]);
+    } catch (error) {
+        console.error('Error loading analytics charts:', error);
+    }
+}
+
+// Render charts (wrapper function)
+function renderCharts() {
+    if (currentTab === 'analytics') {
+        loadAnalyticsCharts();
+    }
 }
 
 // Status Distribution Chart
 async function loadStatusChart() {
     try {
+        // Check if Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
         const response = await fetch(`${API_BASE}/api/stats`);
+        if (!response.ok) {
+            console.error('Failed to fetch stats:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        if (!data.success) return;
+        if (!data || !data.success) {
+            console.error('Invalid stats data:', data);
+            return;
+        }
         
         const ctx = document.getElementById('statusChart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('statusChart canvas not found');
+            return;
+        }
         
-        if (statusChart) statusChart.destroy();
+        // Get 2D context
+        const chartContext = ctx.getContext('2d');
+        if (!chartContext) {
+            console.error('Could not get 2D context for statusChart');
+            return;
+        }
         
-        statusChart = new Chart(ctx, {
+        if (statusChart) {
+            try {
+                statusChart.destroy();
+            } catch (e) {
+                console.warn('Error destroying statusChart:', e);
+            }
+        }
+        
+        statusChart = new Chart(chartContext, {
             type: 'doughnut',
             data: {
                 labels: ['Found', 'Emailed', 'Followed Up', 'Replied'],
@@ -1440,19 +1495,47 @@ async function loadStatusChart() {
 // Conversion Funnel Chart
 async function loadFunnelChart() {
     try {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
         const response = await fetch(`${API_BASE}/api/analytics/funnel`);
+        if (!response.ok) {
+            console.error('Failed to fetch funnel data:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        if (!data.success || !data.funnel) return;
+        if (!data || !data.success || !data.funnel || !Array.isArray(data.funnel)) {
+            console.error('Invalid funnel data:', data);
+            return;
+        }
         
         const ctx = document.getElementById('funnelChart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('funnelChart canvas not found');
+            return;
+        }
         
-        if (funnelChart) funnelChart.destroy();
+        const chartContext = ctx.getContext('2d');
+        if (!chartContext) {
+            console.error('Could not get 2D context for funnelChart');
+            return;
+        }
+        
+        if (funnelChart) {
+            try {
+                funnelChart.destroy();
+            } catch (e) {
+                console.warn('Error destroying funnelChart:', e);
+            }
+        }
         
         const funnelData = data.funnel;
         
-        funnelChart = new Chart(ctx, {
+        funnelChart = new Chart(chartContext, {
             type: 'bar',
             data: {
                 labels: funnelData.map(f => f.stage),
@@ -1483,7 +1566,10 @@ async function loadFunnelChart() {
                         callbacks: {
                             afterLabel: (context) => {
                                 const index = context.dataIndex;
-                                return `${funnelData[index].percentage.toFixed(1)}% conversion`;
+                                if (funnelData[index] && typeof funnelData[index].percentage === 'number') {
+                                    return `${funnelData[index].percentage.toFixed(1)}% conversion`;
+                                }
+                                return '';
                             }
                         }
                     }
@@ -1523,30 +1609,71 @@ async function loadFunnelChart() {
 // Time Series Chart
 async function loadTimeSeriesChart() {
     try {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
         const response = await fetch(`${API_BASE}/api/analytics/timeseries?days=30`);
+        if (!response.ok) {
+            console.error('Failed to fetch time series data:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        if (!data.success || !data.dates) return;
+        if (!data || !data.success || !data.dates || !Array.isArray(data.dates)) {
+            console.error('Invalid time series data:', data);
+            return;
+        }
         
         const ctx = document.getElementById('timeSeriesChart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('timeSeriesChart canvas not found');
+            return;
+        }
         
-        if (timeSeriesChart) timeSeriesChart.destroy();
+        const chartContext = ctx.getContext('2d');
+        if (!chartContext) {
+            console.error('Could not get 2D context for timeSeriesChart');
+            return;
+        }
+        
+        if (timeSeriesChart) {
+            try {
+                timeSeriesChart.destroy();
+            } catch (e) {
+                console.warn('Error destroying timeSeriesChart:', e);
+            }
+        }
         
         // Format dates for display
         const formattedDates = data.dates.map(date => {
-            const d = new Date(date);
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            try {
+                const d = new Date(date);
+                if (isNaN(d.getTime())) return date;
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } catch (e) {
+                return date;
+            }
         });
         
-        timeSeriesChart = new Chart(ctx, {
+        // Ensure data arrays match dates length
+        const daily = data.daily || [];
+        const cumulative = data.cumulative || [];
+        
+        // Pad arrays if needed
+        while (daily.length < formattedDates.length) daily.push(0);
+        while (cumulative.length < formattedDates.length) cumulative.push(0);
+        
+        timeSeriesChart = new Chart(chartContext, {
             type: 'line',
             data: {
                 labels: formattedDates,
                 datasets: [
                     {
                         label: 'Daily Leads',
-                        data: data.daily,
+                        data: daily.slice(0, formattedDates.length),
                         borderColor: chartColors.primary,
                         backgroundColor: 'rgba(0, 122, 255, 0.1)',
                         borderWidth: 2,
@@ -1557,7 +1684,7 @@ async function loadTimeSeriesChart() {
                     },
                     {
                         label: 'Cumulative',
-                        data: data.cumulative,
+                        data: cumulative.slice(0, formattedDates.length),
                         borderColor: chartColors.success,
                         backgroundColor: 'rgba(52, 199, 89, 0.1)',
                         borderWidth: 2,
@@ -1631,17 +1758,50 @@ async function loadTimeSeriesChart() {
 // Lead Sources Chart
 async function loadSourceChart() {
     try {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
         const response = await fetch(`${API_BASE}/api/analytics/sources`);
+        if (!response.ok) {
+            console.error('Failed to fetch sources data:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        if (!data.success || !data.sources) return;
+        if (!data || !data.success || !data.sources || !Array.isArray(data.sources)) {
+            console.error('Invalid sources data:', data);
+            return;
+        }
         
         const ctx = document.getElementById('sourceChart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('sourceChart canvas not found');
+            return;
+        }
         
-        if (sourceChart) sourceChart.destroy();
+        const chartContext = ctx.getContext('2d');
+        if (!chartContext) {
+            console.error('Could not get 2D context for sourceChart');
+            return;
+        }
+        
+        if (sourceChart) {
+            try {
+                sourceChart.destroy();
+            } catch (e) {
+                console.warn('Error destroying sourceChart:', e);
+            }
+        }
         
         const sources = data.sources.slice(0, 10); // Top 10 sources
+        
+        if (sources.length === 0) {
+            console.warn('No sources data to display');
+            return;
+        }
         const colors = [
             chartColors.primary,
             chartColors.secondary,
@@ -1655,7 +1815,7 @@ async function loadSourceChart() {
             chartColors.gray
         ];
         
-        sourceChart = new Chart(ctx, {
+        sourceChart = new Chart(chartContext, {
             type: 'pie',
             data: {
                 labels: sources.map(s => s.name),
@@ -1694,19 +1854,52 @@ async function loadSourceChart() {
 // Campaign Performance Chart
 async function loadCampaignChart() {
     try {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
         const response = await fetch(`${API_BASE}/api/analytics/campaigns`);
+        if (!response.ok) {
+            console.error('Failed to fetch campaigns data:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        if (!data.success || !data.campaigns) return;
+        if (!data || !data.success || !data.campaigns || !Array.isArray(data.campaigns)) {
+            console.error('Invalid campaigns data:', data);
+            return;
+        }
         
         const ctx = document.getElementById('campaignChart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('campaignChart canvas not found');
+            return;
+        }
         
-        if (campaignChart) campaignChart.destroy();
+        const chartContext = ctx.getContext('2d');
+        if (!chartContext) {
+            console.error('Could not get 2D context for campaignChart');
+            return;
+        }
+        
+        if (campaignChart) {
+            try {
+                campaignChart.destroy();
+            } catch (e) {
+                console.warn('Error destroying campaignChart:', e);
+            }
+        }
         
         const campaigns = data.campaigns.slice(0, 8); // Top 8 campaigns
         
-        campaignChart = new Chart(ctx, {
+        if (campaigns.length === 0) {
+            console.warn('No campaigns data to display');
+            return;
+        }
+        
+        campaignChart = new Chart(chartContext, {
             type: 'bar',
             data: {
                 labels: campaigns.map(c => c.name.length > 20 ? c.name.substring(0, 20) + '...' : c.name),
@@ -1754,7 +1947,7 @@ async function loadCampaignChart() {
                         callbacks: {
                             afterLabel: (context) => {
                                 const index = context.dataIndex;
-                                if (context.datasetIndex === 2) {
+                                if (context.datasetIndex === 2 && campaigns[index] && typeof campaigns[index].reply_rate === 'number') {
                                     return `Reply Rate: ${campaigns[index].reply_rate.toFixed(1)}%`;
                                 }
                                 return '';
