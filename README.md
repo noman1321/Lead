@@ -244,4 +244,3 @@ For issues or questions, please check the code comments or raise an issue in you
 ---
 
 **Built with ❤️ using Streamlit, LangChain, and OpenAI**
-
