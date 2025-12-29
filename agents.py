@@ -34,52 +34,69 @@ class LeadDiscoveryAgent:
         """
         Search for companies using SERP API (Google Search)
         Returns list of companies with their websites
+        Enhanced to find specific business websites, not generic sources
         """
         results = []
         
         try:
+            # Enhance query to find specific business websites
+            # Exclude Reddit, articles, directories, review sites
+            enhanced_query = self._enhance_search_query(query)
+            
             # Use SERP API for web search (primary method)
             if self.serpapi_key and SERPAPI_AVAILABLE:
                 search = GoogleSearch({
-                    "q": query,
+                    "q": enhanced_query,
                     "api_key": self.serpapi_key,
-                    "num": max_results,
+                    "num": max_results * 2,  # Get more results to filter
                     "engine": "google"
                 })
                 
                 search_results = search.get_dict()
                 
-                # Extract organic results
+                # Extract organic results and filter
                 if "organic_results" in search_results:
-                    for result in search_results["organic_results"][:max_results]:
-                        results.append({
-                            "title": result.get("title", ""),
-                            "url": result.get("link", ""),
-                            "content": result.get("snippet", ""),
-                            "score": 1.0,  # SERP API doesn't provide scores, default to 1.0
-                        })
+                    for result in search_results["organic_results"]:
+                        url = result.get("link", "")
+                        title = result.get("title", "")
+                        
+                        # Filter out unwanted sources
+                        if self._is_valid_business_website(url, title):
+                            results.append({
+                                "title": title,
+                                "url": url,
+                                "content": result.get("snippet", ""),
+                                "score": self._calculate_relevance_score(result, query),
+                            })
+                            
+                            # Stop when we have enough valid results
+                            if len(results) >= max_results:
+                                break
                 
                 # Also check for knowledge graph results (company info)
                 if "knowledge_graph" in search_results:
                     kg = search_results["knowledge_graph"]
                     if "website" in kg:
-                        results.insert(0, {
-                            "title": kg.get("title", ""),
-                            "url": kg.get("website", ""),
-                            "content": kg.get("description", ""),
-                            "score": 1.0,
-                        })
+                        kg_url = kg.get("website", "")
+                        if self._is_valid_business_website(kg_url, kg.get("title", "")):
+                            results.insert(0, {
+                                "title": kg.get("title", ""),
+                                "url": kg_url,
+                                "content": kg.get("description", ""),
+                                "score": 1.0,
+                            })
             
             # Fallback to Tavily if SERP API not available
             elif self.tavily_api_key:
+                enhanced_query = self._enhance_search_query(query)
                 tavily_url = "https://api.tavily.com/search"
                 response = requests.post(
                     tavily_url,
                     json={
                         "api_key": self.tavily_api_key,
-                        "query": query,
+                        "query": enhanced_query,
                         "search_depth": "basic",
-                        "max_results": max_results,
+                        "max_results": max_results * 2,
                         "include_domains": [],
                         "include_answer": True,
                     },
@@ -89,12 +106,20 @@ class LeadDiscoveryAgent:
                 if response.status_code == 200:
                     data = response.json()
                     for result in data.get("results", []):
-                        results.append({
-                            "title": result.get("title", ""),
-                            "url": result.get("url", ""),
-                            "content": result.get("content", ""),
-                            "score": result.get("score", 0),
-                        })
+                        url = result.get("url", "")
+                        title = result.get("title", "")
+                        
+                        # Filter out unwanted sources
+                        if self._is_valid_business_website(url, title):
+                            results.append({
+                                "title": title,
+                                "url": url,
+                                "content": result.get("content", ""),
+                                "score": result.get("score", 0),
+                            })
+                            
+                            if len(results) >= max_results:
+                                break
             else:
                 # Final fallback: Use LLM to generate search suggestions
                 results = self._generate_mock_results(query, max_results)
@@ -104,6 +129,166 @@ class LeadDiscoveryAgent:
             results = self._generate_mock_results(query, max_results)
         
         return results
+    
+    def _enhance_search_query(self, query: str) -> str:
+        """
+        Enhance search query to find specific business websites
+        Excludes generic sources like Reddit, articles, directories
+        """
+        # Add terms to find official websites
+        enhanced = f"{query} official website -site:reddit.com -site:quora.com -site:medium.com -site:linkedin.com/posts -site:facebook.com -site:twitter.com -site:x.com"
+        
+        # Exclude common article and directory sites
+        exclude_sites = [
+            "-site:tripadvisor.com",
+            "-site:yelp.com",
+            "-site:zomato.com",
+            "-site:timeout.com",
+            "-site:cntraveller.com",
+            "-site:michelin.com",
+            "-site:theworlds50best.com",
+            "-site:*.blog",
+            "-site:*.wordpress.com",
+            "-site:*.medium.com",
+            "-site:*.substack.com"
+        ]
+        
+        enhanced += " " + " ".join(exclude_sites)
+        
+        # Add terms to prioritize business websites
+        enhanced += " contact information"
+        
+        return enhanced
+    
+    def _is_valid_business_website(self, url: str, title: str) -> bool:
+        """
+        Check if URL is a valid business website (not Reddit, articles, etc.)
+        """
+        if not url:
+            return False
+        
+        url_lower = url.lower()
+        title_lower = title.lower()
+        
+        # Exclude unwanted domains
+        excluded_domains = [
+            "reddit.com",
+            "quora.com",
+            "medium.com",
+            "linkedin.com/posts",
+            "facebook.com",
+            "twitter.com",
+            "x.com",
+            "tripadvisor.com",
+            "yelp.com",
+            "zomato.com",
+            "timeout.com",
+            "cntraveller.com",
+            "michelin.com",
+            "theworlds50best.com",
+            "seasonedtraveller.com",
+            "qic.online",
+            "guide.michelin.com",
+            ".blog",
+            "wordpress.com",
+            "substack.com",
+            "wellfound.com",
+            "angel.co",
+            "crunchbase.com",
+            "pitchbook.com",
+            "bloomberg.com",
+            "reuters.com",
+            "forbes.com",
+            "techcrunch.com",
+            "wikipedia.org",
+            "wikimedia.org"
+        ]
+        
+        # Check if URL contains excluded domains
+        for domain in excluded_domains:
+            if domain in url_lower:
+                return False
+        
+        # Exclude if it's clearly an article or post
+        excluded_paths = [
+            "/post/",
+            "/posts/",
+            "/article/",
+            "/articles/",
+            "/blog/",
+            "/news/",
+            "/story/",
+            "/stories/",
+            "/review/",
+            "/reviews/",
+            "/list/",
+            "/lists/",
+            "/guide/",
+            "/guides/"
+        ]
+        
+        for path in excluded_paths:
+            if path in url_lower:
+                # Allow if it's the main page (e.g., /blog/ without additional path)
+                if url_lower.count("/") <= 3:  # Allow main blog pages
+                    continue
+                return False
+        
+        # Prefer URLs that look like business websites
+        # Should have a domain that's not a subdomain of a large platform
+        if url_lower.count(".") < 2:  # Simple domain like example.com
+            return True
+        
+        # Allow subdomains of business sites (e.g., www.example.com, blog.example.com)
+        if url_lower.startswith(("http://www.", "https://www.", "http://blog.", "https://blog.")):
+            return True
+        
+        # Exclude if it's a subdomain of a known platform
+        platform_subdomains = [
+            ".medium.com",
+            ".wordpress.com",
+            ".blogspot.com",
+            ".tumblr.com",
+            ".wixsite.com",
+            ".squarespace.com"
+        ]
+        
+        for platform in platform_subdomains:
+            if platform in url_lower:
+                return False
+        
+        return True
+    
+    def _calculate_relevance_score(self, result: Dict, original_query: str) -> float:
+        """
+        Calculate relevance score for a search result
+        Higher score for business websites, lower for generic content
+        """
+        url = result.get("link", "").lower()
+        title = result.get("title", "").lower()
+        snippet = result.get("snippet", "").lower()
+        query_lower = original_query.lower()
+        
+        score = 1.0
+        
+        # Boost score for business-related terms in URL
+        business_terms = ["contact", "about", "company", "restaurant", "cafe", "hotel", "business"]
+        for term in business_terms:
+            if term in url or term in title:
+                score += 0.2
+        
+        # Boost score if query terms appear in title
+        query_words = query_lower.split()
+        matches = sum(1 for word in query_words if word in title)
+        score += matches * 0.1
+        
+        # Reduce score for generic terms
+        generic_terms = ["list", "best", "top", "review", "article", "blog", "news"]
+        for term in generic_terms:
+            if term in title or term in url:
+                score -= 0.1
+        
+        return max(0.1, min(1.0, score))  # Clamp between 0.1 and 1.0
     
     def _generate_mock_results(self, query: str, max_results: int) -> List[Dict]:
         """Generate mock results when API is not available"""
@@ -143,14 +328,29 @@ class LeadEnrichmentAgent:
             website_url = base_url  # Store the main website URL
             
             # Collect content from multiple pages
+            # Context-aware page selection based on URL and query
             all_content = []
-            pages_to_scrape = [
-                base_url,  # Homepage
-                f"{base_url}/about",
-                f"{base_url}/contact",
-                f"{base_url}/company",
-                f"{base_url}/team"
-            ]
+            pages_to_scrape = [base_url]  # Always start with homepage
+            
+            # Add context-specific pages
+            # For restaurants: prioritize contact, reservations, about pages
+            url_lower = base_url.lower()
+            if any(term in url_lower for term in ["restaurant", "cafe", "dining", "bistro", "eatery", "food"]):
+                pages_to_scrape.extend([
+                    f"{base_url}/contact",
+                    f"{base_url}/reservations",
+                    f"{base_url}/book-a-table",
+                    f"{base_url}/about",
+                    f"{base_url}/menu"
+                ])
+            else:
+                # General business pages
+                pages_to_scrape.extend([
+                    f"{base_url}/contact",
+                    f"{base_url}/about",
+                    f"{base_url}/company",
+                    f"{base_url}/team"
+                ])
             
             # Try Firecrawl first (better for deep scraping)
             if self.firecrawl_api_key:
@@ -339,7 +539,7 @@ class LeadEnrichmentAgent:
             "company_name": "official name of the company",
             "description": "detailed description of what the company does, their products/services, and value proposition",
             "website_url": "{base_url}",
-            "email": "contact email if found (check contact pages, footer, etc.), otherwise null",
+            "email": "contact email if found (PRIORITY: check contact pages, footer, 'Contact Us' sections, 'Get in Touch' sections, header, about page - look for patterns like contact@domain, info@domain, hello@domain, reservations@domain, booking@domain, sales@domain). If not explicitly found, suggest the most likely email based on the domain.",
             "phone": "phone number if found, otherwise null",
             "location": "city, country or address if mentioned",
             "industry": "industry or sector the company operates in",
@@ -356,10 +556,21 @@ class LeadEnrichmentAgent:
             "target_audience": "who their target customers are"
         }}
         
+        CRITICAL EMAIL EXTRACTION INSTRUCTIONS:
+        - Search the ENTIRE content for email addresses, especially in:
+          * Contact pages
+          * Footer sections
+          * "Contact Us" or "Get in Touch" sections
+          * Header/navigation menus
+          * About pages
+        - Look for email patterns matching the domain: {base_url}
+        - For restaurants: look for reservations@, booking@, contact@, info@, hello@
+        - For businesses: look for contact@, info@, sales@, hello@, inquiry@
+        - If no email is found in content, generate the most likely email based on the domain (e.g., contact@domain.com)
+        - NEVER return null for email - always provide a best guess if not found
+        
         Important:
         - Always include the website_url field with the base URL: {base_url}
-        - Extract email from content, footer, contact pages
-        - If email not found, suggest common patterns like contact@domain, info@domain, hello@domain based on the URL
         - Be thorough in extracting pain_points based on industry and company description
         - Extract as much detail as possible from the content
         """
@@ -386,16 +597,21 @@ class LeadEnrichmentAgent:
             if not extracted_info.get("website_url"):
                 extracted_info["website_url"] = base_url
             
-            # Try to find email in original content if not found
-            if not extracted_info.get("email"):
+            # Try to find email in original content if not found (more aggressive search)
+            if not extracted_info.get("email") or extracted_info.get("email") == "null":
+                # First, try finding in content
                 email = self._find_email_in_content(content, base_url)
                 if email:
                     extracted_info["email"] = email
                 else:
-                    # Try guessing from URL
-                    guessed_email = self._guess_email_from_url(base_url)
+                    # Try guessing from URL with multiple patterns
+                    guessed_email = self._guess_email_from_url(base_url, content)
                     if guessed_email:
                         extracted_info["email"] = guessed_email
+            
+            # Ensure email is never null - always provide a best guess
+            if not extracted_info.get("email") or extracted_info.get("email") == "null":
+                extracted_info["email"] = self._guess_email_from_url(base_url, content)
             
             # Ensure all required fields exist
             extracted_info.setdefault("source_url", base_url)
@@ -426,27 +642,95 @@ class LeadEnrichmentAgent:
             }
     
     def _find_email_in_content(self, content: str, url: str) -> Optional[str]:
-        """Try to find email addresses in content"""
+        """Try to find email addresses in content, prioritizing business emails"""
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         emails = re.findall(email_pattern, content)
-        if emails:
-            return emails[0]
-        return None
+        
+        if not emails:
+            return None
+        
+        # Extract domain from URL
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc.replace("www.", "").lower()
+        except:
+            domain = ""
+        
+        # Prioritize emails from the same domain
+        same_domain_emails = []
+        other_emails = []
+        
+        for email in emails:
+            email_lower = email.lower()
+            # Skip common generic emails that aren't from the domain
+            if email_lower.endswith(domain) or domain in email_lower:
+                same_domain_emails.append(email)
+            elif not any(skip in email_lower for skip in ["example.com", "test.com", "sample.com", "noreply", "no-reply"]):
+                other_emails.append(email)
+        
+        # Prefer business-related email addresses
+        business_emails = []
+        for email in same_domain_emails + other_emails:
+            email_lower = email.lower()
+            if any(term in email_lower for term in ["contact", "info", "hello", "sales", "business", "inquiry", "enquiry"]):
+                business_emails.append(email)
+        
+        # Return priority: business emails from same domain > same domain emails > business emails > other emails
+        if business_emails and any(email.lower().endswith(domain) for email in business_emails if domain):
+            for email in business_emails:
+                if email.lower().endswith(domain):
+                    return email
+        
+        if business_emails:
+            return business_emails[0]
+        
+        if same_domain_emails:
+            return same_domain_emails[0]
+        
+        return other_emails[0] if other_emails else None
     
-    def _guess_email_from_url(self, url: str) -> Optional[str]:
-        """Guess common email patterns from URL"""
+    def _guess_email_from_url(self, url: str, content: str = "") -> Optional[str]:
+        """Guess common email patterns from URL, with context-aware suggestions"""
         try:
             domain = url.split("//")[-1].split("/")[0]
             if domain.startswith("www."):
                 domain = domain[4:]
-            # Try common patterns
-            common_emails = [
-                f"contact@{domain}",
-                f"info@{domain}",
-                f"hello@{domain}",
-                f"sales@{domain}"
-            ]
-            return common_emails[0]  # Return first as guess
+            
+            content_lower = content.lower() if content else ""
+            
+            # Context-aware email patterns based on content
+            if any(term in content_lower for term in ["restaurant", "dining", "food", "menu", "reservation", "booking"]):
+                # Restaurant-specific patterns
+                restaurant_emails = [
+                    f"contact@{domain}",
+                    f"info@{domain}",
+                    f"reservations@{domain}",
+                    f"booking@{domain}",
+                    f"hello@{domain}",
+                    f"inquiry@{domain}"
+                ]
+                return restaurant_emails[0]
+            elif any(term in content_lower for term in ["hotel", "accommodation", "stay", "room"]):
+                # Hotel-specific patterns
+                hotel_emails = [
+                    f"contact@{domain}",
+                    f"info@{domain}",
+                    f"reservations@{domain}",
+                    f"booking@{domain}",
+                    f"hello@{domain}"
+                ]
+                return hotel_emails[0]
+            else:
+                # General business patterns
+                common_emails = [
+                    f"contact@{domain}",
+                    f"info@{domain}",
+                    f"hello@{domain}",
+                    f"sales@{domain}",
+                    f"inquiry@{domain}"
+                ]
+                return common_emails[0]
         except:
             return None
 
