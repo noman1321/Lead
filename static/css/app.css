@@ -319,12 +319,13 @@ body {
     margin-bottom: 1.5rem;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
-    transition: all var(--transition-smooth);
+    transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth);
+    will-change: box-shadow, border-color;
 }
 
 .card:hover {
     box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: var(--primary);
 }
 
 .card-header {
@@ -965,7 +966,7 @@ label {
 /* Stats Grid */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.25rem;
     margin-bottom: 1.5rem;
 }
@@ -981,20 +982,23 @@ label {
     align-items: center;
     gap: 1.25rem;
     box-shadow: var(--shadow-xs);
-    transition: all var(--transition-smooth);
+    transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth);
     position: relative;
     overflow: hidden;
+    min-width: 0;
+    will-change: box-shadow, border-color;
 }
 
 .stat-card:hover {
     box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
     border-color: var(--primary);
 }
 
 .stat-icon {
     width: 56px;
     height: 56px;
+    min-width: 56px;
+    min-height: 56px;
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
@@ -1002,8 +1006,10 @@ label {
     color: white;
     font-size: 1.5rem;
     box-shadow: var(--shadow-sm);
-    transition: all var(--transition-smooth);
+    transition: transform var(--transition-smooth);
     background: var(--primary);
+    transform-origin: center;
+    will-change: transform;
 }
 
 .stat-card:hover .stat-icon {
@@ -1473,17 +1479,34 @@ label {
 
 
 /* Chart Containers */
+.card-body {
+    position: relative;
+    min-height: 400px;
+}
+
 .card-body canvas {
     max-height: 400px;
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+    position: relative;
 }
 
 .chart-container {
     position: relative;
     height: 400px;
     width: 100%;
+    min-height: 400px;
+    min-width: 0;
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
@@ -1517,6 +1540,11 @@ label {
 
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        min-width: 0;
     }
 
     .form-row {
