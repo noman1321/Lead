@@ -21,7 +21,8 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")  # Use App Password for Gmail
 EMAIL_FROM = os.getenv("EMAIL_FROM", "")
 
 # Database
-DATABASE_PATH = "leads.db"
+# Use environment variable for database path (useful for cloud deployments)
+DATABASE_PATH = os.getenv("DATABASE_PATH", "leads.db")
 
 # LLM Configuration
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")  # or "gpt-4o" or "claude-3-5-sonnet-20241022"

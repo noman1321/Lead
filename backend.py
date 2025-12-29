@@ -91,15 +91,28 @@ class CampaignCreateRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize agents on startup"""
+    import traceback
     global discovery_agent, enrichment_agent, validator_agent, copywriter
     try:
         if config.OPENAI_API_KEY:
+            print("Initializing AI agents...")
             discovery_agent = LeadDiscoveryAgent()
+            print("✅ Discovery agent initialized")
             enrichment_agent = LeadEnrichmentAgent()
+            print("✅ Enrichment agent initialized")
             validator_agent = LeadValidatorAgent()
+            print("✅ Validator agent initialized")
             copywriter = AICopywriter()
+            print("✅ Copywriter initialized")
+        else:
+            print("⚠️ WARNING: OPENAI_API_KEY not set. Agents will not be initialized.")
     except Exception as e:
-        print(f"Warning: Agents not initialized: {e}")
+        error_trace = traceback.format_exc()
+        print(f"❌ ERROR: Agents not initialized: {error_trace}")
+        discovery_agent = None
+        enrichment_agent = None
+        validator_agent = None
+        copywriter = None
 
 
 # API Routes
@@ -129,46 +142,96 @@ async def get_config():
         "openai_key": bool(config.OPENAI_API_KEY),
         "serpapi_key": bool(config.SERPAPI_API_KEY),
         "tavily_key": bool(config.TAVILY_API_KEY),
-        "smtp_configured": bool(config.SMTP_USERNAME and config.SMTP_PASSWORD)
+        "smtp_configured": bool(config.SMTP_USERNAME and config.SMTP_PASSWORD),
+        "agents_initialized": bool(discovery_agent and enrichment_agent)
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for deployment platforms"""
+    try:
+        # Test database connection
+        db.get_all_campaigns()
+        db_status = "ok"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return {
+        "status": "healthy" if db_status == "ok" else "degraded",
+        "database": db_status,
+        "agents": "initialized" if (discovery_agent and enrichment_agent) else "not_initialized",
+        "openai_configured": bool(config.OPENAI_API_KEY),
+        "search_api_configured": bool(config.SERPAPI_API_KEY or config.TAVILY_API_KEY)
     }
 
 
 @app.post("/api/leads/discover")
 async def discover_leads(request: LeadSearchRequest, background_tasks: BackgroundTasks):
     """Discover and enrich leads"""
+    import traceback
+    
+    # Check if agents are initialized
     if not discovery_agent or not enrichment_agent:
-        raise HTTPException(status_code=500, detail="Agents not initialized. Check API keys.")
+        error_msg = "Agents not initialized. "
+        if not config.OPENAI_API_KEY:
+            error_msg += "OPENAI_API_KEY is missing. "
+        if not config.SERPAPI_API_KEY and not config.TAVILY_API_KEY:
+            error_msg += "Either SERPAPI_API_KEY or TAVILY_API_KEY is required."
+        print(f"ERROR: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
     
     # Use existing campaign if provided, otherwise create new one
-    if request.campaign_id:
-        # Validate that campaign exists
-        existing_campaign = db.get_campaign(request.campaign_id)
-        if not existing_campaign:
-            raise HTTPException(status_code=404, detail="Campaign not found")
-        campaign_id = request.campaign_id
-        campaign_name = existing_campaign.name
-    else:
-        # Create new campaign
-        campaign_id = str(uuid.uuid4())[:8]
-        campaign_name = request.campaign_name or request.query[:50]
-        try:
-            db.create_campaign(campaign_id, campaign_name, request.query, f"Max leads: {request.max_leads}")
-        except:
-            pass
+    try:
+        if request.campaign_id:
+            # Validate that campaign exists
+            existing_campaign = db.get_campaign(request.campaign_id)
+            if not existing_campaign:
+                raise HTTPException(status_code=404, detail="Campaign not found")
+            campaign_id = request.campaign_id
+            campaign_name = existing_campaign.name
+        else:
+            # Create new campaign
+            campaign_id = str(uuid.uuid4())[:8]
+            campaign_name = request.campaign_name or request.query[:50]
+            try:
+                db.create_campaign(campaign_id, campaign_name, request.query, f"Max leads: {request.max_leads}")
+            except Exception as e:
+                print(f"Warning: Could not create campaign: {e}")
+                pass
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR in campaign setup: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error setting up campaign: {str(e)}")
     
     # Discover leads
     try:
+        print(f"Starting lead discovery for query: {request.query}")
         search_results = discovery_agent.search_companies(request.query, request.max_leads * 2)
+        print(f"Found {len(search_results)} search results")
+        
+        if not search_results:
+            return {
+                "success": True,
+                "leads": [],
+                "campaign_id": campaign_id,
+                "campaign_name": campaign_name,
+                "message": "No companies found matching your search criteria. Try a different query."
+            }
+        
         leads = []
         
-        for result in search_results[:request.max_leads]:
+        for idx, result in enumerate(search_results[:request.max_leads]):
             try:
                 website_url = result.get("url", "")
                 if not website_url:
+                    print(f"Skipping result {idx}: No URL")
                     continue
                 
+                print(f"Processing {idx+1}/{min(len(search_results), request.max_leads)}: {website_url}")
                 company_data = enrichment_agent.scrape_website(website_url)
                 if not company_data:
+                    print(f"Skipping {website_url}: No company data extracted")
                     continue
                 
                 email = company_data.get("email")
@@ -176,17 +239,20 @@ async def discover_leads(request: LeadSearchRequest, background_tasks: Backgroun
                     email = enrichment_agent._guess_email_from_url(website_url)
                 
                 if not email:
+                    print(f"Skipping {website_url}: No email found")
                     continue
                 
                 # Check for duplicates
                 existing = db.get_lead_by_email(email)
                 if existing:
+                    print(f"Skipping {email}: Duplicate")
                     continue
                 
                 # Validate lead
                 if validator_agent:
                     is_valid = validator_agent.validate_lead(company_data, request.query)
                     if not is_valid:
+                        print(f"Skipping {email}: Failed validation")
                         continue
                 
                 # Add to database
@@ -210,20 +276,26 @@ async def discover_leads(request: LeadSearchRequest, background_tasks: Backgroun
                     "campaign_id": campaign_id,
                     "website_url": company_data.get("website_url") or company_data.get("source_url") or website_url
                 })
+                print(f"Added lead: {email}")
             except Exception as e:
-                print(f"Error processing lead: {e}")
+                print(f"Error processing lead {idx}: {traceback.format_exc()}")
                 continue
         
         # Update campaign lead count
         background_tasks.add_task(db.update_campaign_lead_count, campaign_id)
         
+        print(f"Discovery complete: {len(leads)} leads added")
         return {
             "success": True,
             "leads": leads,
             "campaign_id": campaign_id,
             "campaign_name": campaign_name
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"ERROR in discover_leads: {error_trace}")
         raise HTTPException(status_code=500, detail=f"Error discovering leads: {str(e)}")
 
 
