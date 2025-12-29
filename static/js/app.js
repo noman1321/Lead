@@ -537,7 +537,10 @@ async function sendEmail(email, index) {
 
         if (!response.ok) {
             if (rollback) rollback();
-            throw new Error(data.detail || 'Failed to send email');
+            const errorMsg = data.detail || data.message || 'Failed to send email';
+            console.error('Email send error:', errorMsg);
+            showToast(errorMsg, 'error');
+            return;
         }
 
         if (data.success) {
@@ -1033,15 +1036,25 @@ async function sendEmailToLead(email, subject, body) {
         const data = await response.json();
         hideLoading();
 
+        if (!response.ok) {
+            const errorMsg = data.detail || data.message || 'Failed to send email';
+            console.error('Email send error:', errorMsg);
+            showToast(errorMsg, 'error');
+            return;
+        }
+
         if (data.success) {
-            showToast('Email sent successfully!', 'success');
+            showToast(data.message || 'Email sent successfully!', 'success');
             loadLeads();
         } else {
-            throw new Error(data.detail || 'Failed to send email');
+            const errorMsg = data.detail || data.message || 'Failed to send email';
+            showToast(errorMsg, 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast(`Error: ${error.message}`, 'error');
+        console.error('Email send exception:', error);
+        const errorMsg = error.message || 'Failed to send email. Please check your SMTP configuration.';
+        showToast(errorMsg, 'error');
     }
 }
 

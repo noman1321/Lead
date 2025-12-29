@@ -329,18 +329,46 @@ async def generate_email(request: EmailGenerateRequest):
 @app.post("/api/email/send")
 async def send_email(request: EmailSendRequest):
     """Send email to a lead"""
+    import traceback
     try:
+        # Validate SMTP configuration
+        if not config.SMTP_USERNAME or not config.SMTP_PASSWORD:
+            raise HTTPException(
+                status_code=400, 
+                detail="❌ SMTP credentials not configured. Please set SMTP_USERNAME and SMTP_PASSWORD in your environment variables."
+            )
+        
+        # Validate email address
+        if not request.lead_email or '@' not in request.lead_email:
+            raise HTTPException(
+                status_code=400,
+                detail=f"❌ Invalid email address: {request.lead_email}"
+            )
+        
+        print(f"Attempting to send email to {request.lead_email}")
+        print(f"SMTP Server: {config.SMTP_SERVER}:{config.SMTP_PORT}")
+        print(f"From: {config.EMAIL_FROM or config.SMTP_USERNAME}")
+        
         result = email_sender.send_lead_email(
             request.lead_email,
             request.email_content,
             subject=request.subject
         )
         
+        print(f"Email send result: {result}")
+        
         if result["success"]:
             return {"success": True, "message": result["message"]}
         else:
-            raise HTTPException(status_code=400, detail=result["message"])
+            # Return detailed error message
+            error_detail = result.get("message", "Unknown error")
+            print(f"Email send failed: {error_detail}")
+            raise HTTPException(status_code=400, detail=error_detail)
+    except HTTPException:
+        raise
     except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"ERROR in send_email: {error_trace}")
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
 
 
