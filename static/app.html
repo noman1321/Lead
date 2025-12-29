@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadGen AI - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="logo" style="text-decoration: none; color: inherit;">
+                <span class="logo-icon">🎯</span>
+                <span class="logo-text">LeadGen AI</span>
+            </a>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="#discover" class="nav-item active" data-tab="discover">
+                <i class="fas fa-search"></i>
+                <span>Discover Leads</span>
+            </a>
+            <a href="#manage" class="nav-item" data-tab="manage">
+                <i class="fas fa-users"></i>
+                <span>Manage Leads</span>
+            </a>
+            <a href="#bulk" class="nav-item" data-tab="bulk">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Bulk Email</span>
+            </a>
+            <a href="#analytics" class="nav-item" data-tab="analytics">
+                <i class="fas fa-chart-bar"></i>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="config-status">
+                <h4>Configuration</h4>
+                <div class="status-item" id="openaiStatus">
+                    <span>OpenAI</span>
+                    <span class="status-badge" id="openaiBadge">❌</span>
+                </div>
+                <div class="status-item" id="serpapiStatus">
+                    <span>SERP API</span>
+                    <span class="status-badge" id="serpapiBadge">❌</span>
+                </div>
+                <div class="status-item" id="smtpStatus">
+                    <span>SMTP</span>
+                    <span class="status-badge" id="smtpBadge">❌</span>
+                </div>
+            </div>
+            <div class="stats-box">
+                <div class="stat-mini">
+                    <span class="stat-label">Total Leads</span>
+                    <span class="stat-value" id="statTotal">0</span>
+                </div>
+                <div class="stat-mini">
+                    <span class="stat-label">Emailed</span>
+                    <span class="stat-value" id="statEmailed">0</span>
+                </div>
+                <div class="stat-mini">
+                    <span class="stat-label">Replies</span>
+                    <span class="stat-value" id="statReplies">0</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="btn-icon mobile-menu-btn" id="mobileMenuBtn" title="Menu" style="display: none;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle">Discover Leads</h1>
+            </div>
+            <div class="topbar-right">
+                <button class="btn-icon" id="refreshBtn" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn-icon" id="testEmailBtn" title="Test Email">
+                    <i class="fas fa-envelope"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="content-area">
+            <!-- Discover Leads Tab -->
+            <section class="tab-content active" id="tab-discover">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Discover New Leads</h2>
+                        <p>Enter your search criteria and let AI find the perfect leads for you</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="searchQuery">Search Query</label>
+                            <input type="text" id="searchQuery" class="input" 
+                                   placeholder="e.g., 'Find me mid-sized AI startups in London that recently raised Series A'">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Campaign Selection</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="campaignType" value="existing" id="campaignTypeExisting" checked>
+                                    <span>Use Existing Campaign</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="campaignType" value="new" id="campaignTypeNew">
+                                    <span>Create New Campaign</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="existingCampaignGroup">
+                            <label for="existingCampaign">Select Campaign</label>
+                            <select id="existingCampaign" class="select">
+                                <option value="">Loading campaigns...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="newCampaignGroup" style="display: none;">
+                            <label for="campaignName">New Campaign Name</label>
+                            <input type="text" id="campaignName" class="input" 
+                                   placeholder="e.g., 'AI Startups London Q1 2024'">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="maxLeads">Max Leads</label>
+                            <input type="number" id="maxLeads" class="input" value="10" min="1" max="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="userContext">Your Service/Product Context</label>
+                            <textarea id="userContext" class="textarea" rows="4" 
+                                      placeholder="e.g., 'We provide AI-powered CRM solutions that help startups automate their sales processes'"></textarea>
+                        </div>
+
+                        <button class="btn-primary btn-large" id="discoverBtn">
+                            <i class="fas fa-rocket"></i>
+                            Discover Leads
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Discovered Leads -->
+                <div id="discoveredLeads" class="leads-container" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 id="discoveredTitle">Discovered Leads</h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="leadsList" class="leads-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manage Leads Tab -->
+            <section class="tab-content" id="tab-manage">
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Manage Leads</h2>
+                        <button class="btn-secondary" id="downloadLeadsBtn" title="Download Leads as CSV">
+                            <i class="fas fa-download"></i>
+                            Download CSV
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="filters">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="filterCampaign">Campaign</label>
+                                    <select id="filterCampaign" class="select">
+                                        <option value="">All Campaigns</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="filterStatus">Status</label>
+                                    <select id="filterStatus" class="select">
+                                        <option value="">All</option>
+                                        <option value="found">Found</option>
+                                        <option value="emailed">Emailed</option>
+                                        <option value="followed_up">Followed Up</option>
+                                        <option value="replied">Replied</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="searchEmail">Search Email</label>
+                                    <input type="text" id="searchEmail" class="input" placeholder="Search by email">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="leadsTableContainer">
+                            <table class="table" id="leadsTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Email</th>
+                                        <th>Name</th>
+                                        <th>Company</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lead Details Modal -->
+                <div class="modal" id="leadModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>Lead Details</h2>
+                            <button class="modal-close" id="closeModal">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body" id="leadDetailsContent">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bulk Email Tab -->
+            <section class="tab-content" id="tab-bulk">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Bulk Email Campaign</h2>
+                        <p>Send personalized emails to multiple leads at once</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Filter Leads</label>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Status(es) to Include</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" name="bulkStatus" value="found" checked> Found</label>
+                                        <label><input type="checkbox" name="bulkStatus" value="emailed"> Emailed</label>
+                                        <label><input type="checkbox" name="bulkStatus" value="followed_up"> Followed Up</label>
+                                        <label><input type="checkbox" name="bulkStatus" value="replied"> Replied</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="excludeReplied" checked>
+                                        Exclude leads that have replied
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkCampaign">Filter by Campaign (Optional)</label>
+                            <select id="bulkCampaign" class="select">
+                                <option value="">All Campaigns</option>
+                            </select>
+                        </div>
+
+                        <div id="bulkLeadsCount" class="info-box">
+                            <strong>0 leads</strong> selected for bulk email
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkContext">Your Service/Product Context</label>
+                            <textarea id="bulkContext" class="textarea" rows="4" 
+                                      placeholder="e.g., 'We provide AI-powered CRM solutions...'"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkSubject">Email Subject Template</label>
+                            <input type="text" id="bulkSubject" class="input" 
+                                   value="Quick question about {company_name}">
+                            <small>Use {company_name} or {name} as placeholders</small>
+                        </div>
+
+                        <div class="warning-box">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="bulkWarning">You are about to send emails to <strong>0 leads</strong></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="confirmBulkSend">
+                                I understand and want to send bulk emails
+                            </label>
+                        </div>
+
+                        <button class="btn-primary btn-large" id="bulkSendBtn" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                            Send Bulk Emails
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Tab -->
+            <section class="tab-content" id="tab-analytics">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="analyticsTotal">0</div>
+                            <div class="stat-label">Total Leads</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="analyticsFound">0</div>
+                            <div class="stat-label">Found</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="analyticsEmailed">0</div>
+                            <div class="stat-label">Emailed</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <i class="fas fa-reply"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="analyticsReplies">0</div>
+                            <div class="stat-value-small" id="analyticsReplyRate">0%</div>
+                            <div class="stat-label">Replies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Status Distribution</h2>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Conversion Funnel</h2>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="funnelChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Lead Growth Over Time</h2>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="timeSeriesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Lead Sources</h2>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="sourceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Campaign Performance</h2>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="campaignChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Campaigns</h2>
+                        <button class="btn-secondary" onclick="loadCampaigns()" title="Refresh Campaigns">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="campaignsList" class="campaigns-list"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingText">Loading...</p>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+

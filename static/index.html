@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadGen AI - Intelligent Lead Generation System</title>
+    <link rel="stylesheet" href="/static/css/landing.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="nav-brand">
+                <span class="logo-icon">🎯</span>
+                <span class="logo-text">LeadGen AI</span>
+            </a>
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+            <div class="nav-links" id="navLinks">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="/app" class="btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background"></div>
+        <div class="container hero-content">
+            <div class="hero-text fade-in">
+                <h1 class="hero-title">
+                    AI-Powered Lead Generation
+                    <span class="gradient-text">That Actually Works</span>
+                </h1>
+                <p class="hero-description">
+                    Discover, enrich, and personalize outreach to potential leads with our intelligent agentic system. 
+                    Let AI do the heavy lifting while you focus on closing deals.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/app" class="btn-primary btn-large">Start Generating Leads</a>
+                    <a href="#how-it-works" class="btn-secondary btn-large">Learn More</a>
+                </div>
+            </div>
+            <div class="hero-visual slide-in-right">
+                <div class="visual-card">
+                    <div class="card-glow"></div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">10x</div>
+                            <div class="stat-label">Faster Discovery</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">95%</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">Automation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <div class="mouse"></div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Powerful Features</h2>
+                <p class="section-subtitle">Everything you need to generate and manage leads efficiently</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>AI-Powered Discovery</h3>
+                    <p>Advanced AI agents search and discover companies matching your exact criteria using SERP API and intelligent web scraping.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Lead Enrichment</h3>
+                    <p>Automatically scrape websites, extract contact information, and identify pain points for personalized outreach.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✉️</div>
+                    <h3>AI Email Generation</h3>
+                    <p>Generate personalized, compelling cold emails with AI-generated subject lines tailored to each lead.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📧</div>
+                    <h3>Bulk Email Campaigns</h3>
+                    <p>Send personalized emails to multiple leads at once with progress tracking and detailed results.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏰</div>
+                    <h3>Auto Follow-ups</h3>
+                    <p>Automated 7-day follow-up system that sends reminders if leads don't respond.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Campaign Management</h3>
+                    <p>Organize leads by campaigns, track performance, and manage your pipeline with analytics.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Simple, intelligent, and effective</p>
+            </div>
+            <div class="steps">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Enter Your Query</h3>
+                        <p>Describe what kind of leads you're looking for in natural language. For example: "Find me mid-sized AI startups in London that recently raised Series A"</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>AI Discovers & Enriches</h3>
+                        <p>Our AI agents search for companies, visit their websites, extract contact information, and identify pain points automatically.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Generate Personalized Emails</h3>
+                        <p>AI generates customized email content and subject lines based on each lead's company information and pain points.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Send & Track</h3>
+                        <p>Send emails individually or in bulk. Track responses, manage follow-ups, and analyze your campaign performance.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Transform Your Lead Generation?</h2>
+                <p>Start discovering high-quality leads today with AI-powered automation.</p>
+                <a href="/app" class="btn-primary btn-large">Get Started Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+            <a href="/" class="footer-brand">
+                <span class="logo-icon">🎯</span>
+                <span class="logo-text">LeadGen AI</span>
+            </a>
+                <p class="footer-text">Intelligent lead generation powered by AI</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/landing.js"></script>
+</body>
+</html>
+
