@@ -465,24 +465,50 @@ class LeadValidatorAgent:
     
     def validate_lead(self, lead_info: Dict, original_query: str) -> bool:
         """Determine if a lead matches the original search criteria"""
+        # Extract key information for validation
+        company_name = lead_info.get("company_name", "").lower()
+        description = str(lead_info.get("description", "")).lower()
+        website_url = lead_info.get("website_url", "").lower()
+        
+        # If we don't have enough info, default to valid
+        if not company_name and not description:
+            return True
+        
         prompt = f"""
         Original search query: "{original_query}"
         
         Lead information:
-        {lead_info}
+        - Company: {company_name}
+        - Description: {description[:200]}
+        - Website: {website_url}
         
-        Does this lead match the search criteria? Answer yes or no only.
+        Task: Determine if this lead is RELEVANT to the search query. 
+        
+        Guidelines:
+        - If searching for restaurants, accept restaurant review sites, food blogs, and dining guides as they are relevant
+        - If searching for businesses, accept business directories, review sites, and related services
+        - Be lenient - if there's any connection to the query, accept it
+        - Only reject if completely unrelated (e.g., a restaurant site when searching for software companies)
+        
+        Answer only 'yes' or 'no'.
         """
         
         messages = [
-            SystemMessage(content="You are a lead validation expert. Answer only 'yes' or 'no'."),
+            SystemMessage(content="You are a lead validation expert. Be lenient and accept leads that are even loosely related to the search query. Answer only 'yes' or 'no'."),
             HumanMessage(content=prompt)
         ]
         
         try:
             response = self.llm.invoke(messages)
             answer = response.content.lower().strip()
-            return "yes" in answer or answer.startswith("y")
-        except:
-            return True  # Default to valid if validation fails
+            is_valid = "yes" in answer or answer.startswith("y")
+            
+            if not is_valid:
+                print(f"Validation rejected: {company_name} - LLM response: {answer}")
+            
+            return is_valid
+        except Exception as e:
+            print(f"Validation error for {company_name}: {e}")
+            # Default to valid if validation fails - better to include than exclude
+            return True
 

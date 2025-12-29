@@ -248,12 +248,18 @@ async def discover_leads(request: LeadSearchRequest, background_tasks: Backgroun
                     print(f"Skipping {email}: Duplicate")
                     continue
                 
-                # Validate lead
-                if validator_agent:
-                    is_valid = validator_agent.validate_lead(company_data, request.query)
-                    if not is_valid:
-                        print(f"Skipping {email}: Failed validation")
-                        continue
+                # Validate lead (optional - be lenient)
+                if validator_agent and company_data.get("company_name"):
+                    try:
+                        is_valid = validator_agent.validate_lead(company_data, request.query)
+                        if not is_valid:
+                            print(f"⚠️  Validation rejected {email} ({company_data.get('company_name', 'Unknown')}) - but this might be too strict")
+                            # For now, let's be lenient and accept it anyway if it has an email
+                            # Uncomment the next line to enable strict validation:
+                            # continue
+                    except Exception as e:
+                        print(f"⚠️  Validation error for {email}: {e}, accepting lead anyway")
+                        # Continue with lead if validation fails
                 
                 # Add to database
                 lead = db.add_lead(
