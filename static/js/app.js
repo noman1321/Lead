@@ -7,10 +7,125 @@ let leads = [];
 let campaigns = [];
 let currentLeadEmail = null;
 
+// Initialize GSAP
+if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
+    gsap.registerPlugin(ScrollTrigger);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    initializeGSAPAnimations();
 });
+
+// GSAP Animations for Dashboard
+function initializeGSAPAnimations() {
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+        return;
+    }
+
+    // Animate cards on scroll
+    gsap.utils.toArray('.card').forEach((card, index) => {
+        gsap.from(card, {
+            scrollTrigger: {
+                trigger: card,
+                start: "top 90%",
+                toggleActions: "play none none none"
+            },
+            opacity: 0,
+            y: 40,
+            duration: 0.6,
+            delay: index * 0.1,
+            ease: "power3.out"
+        });
+    });
+
+    // Animate stat cards
+    gsap.utils.toArray('.stat-card').forEach((statCard, index) => {
+        gsap.from(statCard, {
+            scrollTrigger: {
+                trigger: statCard,
+                start: "top 90%",
+                toggleActions: "play none none none"
+            },
+            opacity: 0,
+            scale: 0.9,
+            duration: 0.6,
+            delay: index * 0.1,
+            ease: "back.out(1.7)"
+        });
+
+        // Hover animation
+        statCard.addEventListener('mouseenter', () => {
+            gsap.to(statCard, {
+                y: -5,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+        statCard.addEventListener('mouseleave', () => {
+            gsap.to(statCard, {
+                y: 0,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+    });
+
+    // Animate lead cards
+    const animateLeadCards = () => {
+        gsap.utils.toArray('.lead-card').forEach((leadCard, index) => {
+            gsap.from(leadCard, {
+                scrollTrigger: {
+                    trigger: leadCard,
+                    start: "top 90%",
+                    toggleActions: "play none none none"
+                },
+                opacity: 0,
+                x: -30,
+                duration: 0.5,
+                delay: index * 0.05,
+                ease: "power2.out"
+            });
+        });
+    };
+
+    // Observe when leads are added
+    const leadsContainer = document.getElementById('leadsList');
+    if (leadsContainer) {
+        const observer = new MutationObserver(() => {
+            animateLeadCards();
+        });
+        observer.observe(leadsContainer, { childList: true });
+    }
+
+    // Animate table rows
+    const animateTableRows = () => {
+        gsap.utils.toArray('#leadsTableBody tr').forEach((row, index) => {
+            gsap.from(row, {
+                opacity: 0,
+                x: -20,
+                duration: 0.4,
+                delay: index * 0.03,
+                ease: "power2.out"
+            });
+        });
+    };
+
+    const tableBody = document.getElementById('leadsTableBody');
+    if (tableBody) {
+        const tableObserver = new MutationObserver(() => {
+            animateTableRows();
+        });
+        tableObserver.observe(tableBody, { childList: true });
+    }
+
+    // Page title animation on tab switch
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+        // Will be called from switchTab function
+    }
+}
 
 async function initializeApp() {
     setupEventListeners();
@@ -103,7 +218,7 @@ function switchTab(tab) {
     });
     document.getElementById(`tab-${tab}`)?.classList.add('active');
 
-    // Update page title with animation
+    // Update page title with GSAP animation
     const titles = {
         discover: 'Discover Leads',
         manage: 'Manage Leads',
@@ -112,14 +227,31 @@ function switchTab(tab) {
     };
     const pageTitle = document.getElementById('pageTitle');
     if (pageTitle) {
-        pageTitle.style.opacity = '0';
-        pageTitle.style.transform = 'translateY(-10px)';
-        setTimeout(() => {
-            pageTitle.textContent = titles[tab] || 'Dashboard';
-            pageTitle.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-            pageTitle.style.opacity = '1';
-            pageTitle.style.transform = 'translateY(0)';
-        }, 150);
+        if (typeof gsap !== 'undefined') {
+            gsap.to(pageTitle, {
+                opacity: 0,
+                y: -10,
+                duration: 0.2,
+                onComplete: () => {
+                    pageTitle.textContent = titles[tab] || 'Dashboard';
+                    gsap.to(pageTitle, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.4,
+                        ease: "power2.out"
+                    });
+                }
+            });
+        } else {
+            pageTitle.style.opacity = '0';
+            pageTitle.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                pageTitle.textContent = titles[tab] || 'Dashboard';
+                pageTitle.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                pageTitle.style.opacity = '1';
+                pageTitle.style.transform = 'translateY(0)';
+            }, 150);
+        }
     }
 
     // Load data for current tab

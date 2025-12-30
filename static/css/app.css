@@ -6,44 +6,35 @@
 }
 
 :root {
-    /* Apple Color Palette */
-    --apple-blue: #007AFF;
-    --apple-blue-dark: #0051D5;
-    --apple-gray: #8E8E93;
-    --apple-gray-light: #F2F2F7;
-    --apple-gray-lighter: #FAFAFA;
-    --apple-text-primary: #1D1D1F;
-    --apple-text-secondary: #86868B;
-    --apple-text-tertiary: #C7C7CC;
-    --apple-white: #FFFFFF;
-    --apple-black: #000000;
+    /* Eleven Labs Dark Theme Color Palette */
+    --primary: #00D9FF;
+    --primary-dark: #00B8D9;
+    --primary-light: #33E1FF;
+    --accent-purple: #A855F7;
+    --accent-pink: #EC4899;
+    --accent-blue: #3B82F6;
+    --success: #10B981;
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --info: #00D9FF;
     
-    /* Semantic Colors */
-    --primary: var(--apple-blue);
-    --primary-dark: var(--apple-blue-dark);
-    --primary-light: #5AC8FA;
-    --success: #34C759;
-    --danger: #FF3B30;
-    --warning: #FF9500;
-    --info: #007AFF;
+    /* Dark Backgrounds - Eleven Labs Style */
+    --bg-primary: #0A0A0F;
+    --bg-secondary: #111118;
+    --bg-card: rgba(23, 23, 38, 0.6);
+    --bg-blur: rgba(17, 17, 24, 0.8);
+    --bg-glass: rgba(23, 23, 38, 0.4);
     
-    /* Backgrounds */
-    --bg-primary: #F5F5F7;
-    --bg-secondary: var(--apple-white);
-    --bg-card: rgba(255, 255, 255, 0.8);
-    --bg-blur: rgba(255, 255, 255, 0.72);
-    --bg-glass: rgba(255, 255, 255, 0.7);
-    
-    /* Text */
-    --text-primary: var(--apple-text-primary);
-    --text-secondary: var(--apple-text-secondary);
-    --text-tertiary: var(--apple-text-tertiary);
-    --text-light: #E5E5EA;
+    /* Text Colors */
+    --text-primary: #FFFFFF;
+    --text-secondary: #B4B4C7;
+    --text-tertiary: #6B6B80;
+    --text-light: #4B4B5C;
     
     /* Borders & Dividers */
-    --border: rgba(0, 0, 0, 0.1);
-    --border-light: rgba(0, 0, 0, 0.06);
-    --divider: rgba(0, 0, 0, 0.08);
+    --border: rgba(255, 255, 255, 0.1);
+    --border-light: rgba(255, 255, 255, 0.05);
+    --divider: rgba(255, 255, 255, 0.08);
     
     /* Apple-style Shadows */
     --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -81,6 +72,9 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif;
     background: var(--bg-primary);
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
@@ -98,14 +92,14 @@ body {
     width: var(--sidebar-width);
     height: 100vh;
     background: var(--bg-blur);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(30px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
     border-right: 0.5px solid var(--border);
     display: flex;
     flex-direction: column;
     z-index: 1000;
     transition: transform var(--transition-smooth);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 .sidebar-header {
@@ -165,13 +159,13 @@ body {
 }
 
 .nav-item:hover {
-    background: rgba(0, 122, 255, 0.08);
+    background: rgba(0, 217, 255, 0.1);
     color: var(--primary);
     transform: translateX(2px);
 }
 
 .nav-item.active {
-    background: rgba(0, 122, 255, 0.12);
+    background: rgba(0, 217, 255, 0.15);
     color: var(--primary);
     font-weight: 600;
 }
@@ -210,8 +204,8 @@ body {
 .topbar {
     height: var(--topbar-height);
     background: var(--bg-blur);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(30px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
     border-bottom: 0.5px solid var(--border);
     display: flex;
     justify-content: space-between;
@@ -220,7 +214,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .topbar-left {
@@ -244,7 +238,7 @@ body {
 }
 
 .mobile-menu-btn:hover {
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.1);
 }
 
 .mobile-menu-btn.active {
@@ -292,7 +286,7 @@ body {
 }
 
 .btn-icon:hover {
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.1);
     color: var(--primary);
     transform: scale(1.05);
 }
@@ -312,19 +306,19 @@ body {
 /* Cards */
 .card {
     background: var(--bg-card);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(30px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
     border-radius: var(--radius-xl);
     border: 0.5px solid var(--border);
     margin-bottom: 1.5rem;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth);
     will-change: box-shadow, border-color;
 }
 
 .card:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.2);
     border-color: var(--primary);
 }
 
@@ -390,7 +384,7 @@ label {
 .input:focus, .textarea:focus, .select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.15);
     background: var(--bg-secondary);
 }
 
@@ -417,14 +411,15 @@ label {
 }
 
 .btn-primary {
-    background: var(--primary);
-    color: white;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #0A0A0F;
+    font-weight: 600;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 217, 255, 0.3);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -438,16 +433,18 @@ label {
 }
 
 .btn-secondary {
-    background: var(--bg-secondary);
+    background: var(--bg-card);
     color: var(--text-primary);
     border: 0.5px solid var(--border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: var(--apple-gray-light);
-    border-color: var(--text-tertiary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-xs);
+    background: rgba(0, 217, 255, 0.1);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 217, 255, 0.2);
 }
 
 .btn-secondary:disabled {
@@ -541,7 +538,7 @@ label {
 }
 
 .table thead {
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.05);
 }
 
 .table th {
@@ -588,7 +585,7 @@ label {
 }
 
 .table tbody tr:hover {
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.05);
 }
 
 .status-badge {
@@ -604,22 +601,22 @@ label {
 }
 
 .status-found {
-    background: rgba(0, 122, 255, 0.1);
+    background: rgba(0, 217, 255, 0.15);
     color: var(--primary);
 }
 
 .status-emailed {
-    background: rgba(255, 149, 0, 0.1);
+    background: rgba(245, 158, 11, 0.15);
     color: var(--warning);
 }
 
 .status-followed_up {
-    background: rgba(142, 142, 147, 0.1);
-    color: var(--apple-gray);
+    background: rgba(107, 107, 128, 0.15);
+    color: var(--text-tertiary);
 }
 
 .status-replied {
-    background: rgba(52, 199, 89, 0.1);
+    background: rgba(16, 185, 129, 0.15);
     color: var(--success);
 }
 
@@ -635,20 +632,20 @@ label {
 
 .lead-card {
     background: var(--bg-card);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(30px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
     border: 0.5px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     transition: all var(--transition-smooth);
-    box-shadow: var(--shadow-xs);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     position: relative;
     overflow: hidden;
 }
 
 .lead-card:hover {
     border-color: var(--primary);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.2);
     transform: translateY(-2px);
 }
 
@@ -722,7 +719,7 @@ label {
 .email-editor {
     margin-top: 1rem;
     padding: 1.25rem;
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.05);
     border-radius: var(--radius-md);
     border: 0.5px solid var(--border);
 }
@@ -973,15 +970,15 @@ label {
 
 .stat-card {
     background: var(--bg-card);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(30px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
     border-radius: var(--radius-xl);
     border: 0.5px solid var(--border);
     padding: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    box-shadow: var(--shadow-xs);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     transition: box-shadow var(--transition-smooth), border-color var(--transition-smooth);
     position: relative;
     overflow: hidden;
@@ -990,7 +987,7 @@ label {
 }
 
 .stat-card:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.2);
     border-color: var(--primary);
 }
 
@@ -1060,7 +1057,7 @@ label {
     flex-wrap: wrap;
     gap: 1rem;
     padding: 1rem;
-    background: var(--apple-gray-light);
+    background: rgba(0, 217, 255, 0.05);
     border-radius: var(--radius-md);
     border: 0.5px solid var(--border);
 }
@@ -1078,7 +1075,7 @@ label {
 }
 
 .checkbox-group label:hover, .radio-group label:hover {
-    background: rgba(0, 122, 255, 0.08);
+    background: rgba(0, 217, 255, 0.1);
 }
 
 .radio-group input[type="radio"],
@@ -1100,9 +1097,9 @@ label {
 }
 
 .info-box {
-    background: rgba(0, 122, 255, 0.1);
+    background: rgba(0, 217, 255, 0.1);
     color: var(--primary);
-    border-color: rgba(0, 122, 255, 0.2);
+    border-color: rgba(0, 217, 255, 0.2);
 }
 
 .warning-box {
